@@ -101,7 +101,7 @@ const MonacoPage = () => {
 
   // Update linting when content changes
   const updateLinting = useCallback(() => {
-    if (editor && window.monaco) {
+    if (editor && monacoRef.current) {
       const currentContent = editor.getValue();
       const result = lintYaml(currentContent);
       
@@ -111,18 +111,18 @@ const MonacoPage = () => {
         endLineNumber: error.line,
         endColumn: error.column + 1,
         message: error.message,
-        severity: error.severity === 'error' ? window.monaco.MarkerSeverity.Error : window.monaco.MarkerSeverity.Warning,
+        severity: error.severity === 'error' ? monacoRef.current.MarkerSeverity.Error : monacoRef.current.MarkerSeverity.Warning,
         code: error.fix ? 'FIX_AVAILABLE' : undefined,
-        tags: error.fix ? [window.monaco.MarkerTag.Unnecessary] : undefined
+        tags: error.fix ? [monacoRef.current.MarkerTag.Unnecessary] : undefined
       }));
 
       // Set the diagnostics
-      window.monaco.editor.setModelMarkers(editor.getModel(), 'yaml-custom', diagnostics);
+      monacoRef.current.editor.setModelMarkers(editor.getModel(), 'yaml-custom', diagnostics);
     }
   }, [editor]);
 
   useEffect(() => {
-    if (editor && window.monaco) {
+    if (editor && monacoRef.current) {
       updateLinting();
     }
   }, [content, editor, updateLinting]);
