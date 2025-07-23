@@ -19,6 +19,9 @@ const MonacoPage = () => {
         try {
           console.log('MonacoPage: Monaco loaded successfully');
           
+          // Store Monaco instance
+          monacoRef.current = monaco;
+          
           // Create editor with explicit content
           const monacoEditor = monaco.editor.create(editorRef.current, {
             value: initialYamlContent,
