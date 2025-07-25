@@ -7,19 +7,43 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { lineNumbers } from '@codemirror/view';
 import { bracketMatching } from '@codemirror/language';
 import { keymap } from '@codemirror/view';
-import { defaultKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, indentWithTab, undo, redo, historyField } from '@codemirror/commands';
+import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import { indentationMarkers } from '@replit/codemirror-indentation-markers';
 import { lintYaml, formatYaml, initialYamlContent, applyFix } from '../utils/yamlUtils';
+import { getAvailableMacros } from '../utils/macroUtils';
 
 const CodeMirrorPage = () => {
   const [editor, setEditor] = useState(null);
   const [content, setContent] = useState(initialYamlContent);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const editorRef = useRef(null);
 
   // Debug: Log when component mounts
   useEffect(() => {
     console.log('CodeMirrorPage: Component mounted');
+  }, []);
+
+  // Macro autocompletion function
+  const macroCompletions = useCallback((context) => {
+    // Only show completions when explicitly triggered (Ctrl+Space)
+    if (!context.explicit) return null;
+    
+    const macros = getAvailableMacros();
+    
+    return {
+      from: context.pos,
+      options: macros.map(macro => ({
+        label: macro.name,
+        type: macro.type,
+        info: macro.description,
+        detail: macro.template,
+        apply: macro.template
+      }))
+    };
   }, []);
 
   // Custom linting function for CodeMirror
@@ -71,6 +95,8 @@ const CodeMirrorPage = () => {
     }).filter(Boolean); // Remove null entries
   }, []);
 
+
+
   // Initialize editor
   useEffect(() => {
     console.log('CodeMirrorPage: Initializing editor, editor:', editor, 'editorRef.current:', editorRef.current);
@@ -86,14 +112,37 @@ const CodeMirrorPage = () => {
             oneDark,
             lintGutter(),
             linter(yamlLint),
+            indentationMarkers({
+              highlightActiveBlock: true,
+              hideFirstIndent: false,
+              markerType: "fullScope",
+              thickness: 1,
+              colors: {
+                light: '#F0F1F2',
+                dark: '#2B3245',
+                activeLight: '#E4E5E6',
+                activeDark: '#3C445C'
+              }
+            }),
+            autocompletion({
+              override: [macroCompletions]
+            }),
             EditorView.updateListener.of((update) => {
               if (update.docChanged) {
                 setContent(update.state.doc.toString());
               }
+              
+              // Track undo/redo state
+              const history = update.state.field(historyField, false);
+              if (history) {
+                setCanUndo(history.canUndo);
+                setCanRedo(history.canRedo);
+              }
             }),
             keymap.of([
               indentWithTab,
-              ...defaultKeymap
+              ...defaultKeymap,
+              ...completionKeymap
             ]),
             EditorView.theme({
               "&": {
@@ -123,7 +172,7 @@ const CodeMirrorPage = () => {
         setMessageType('error');
       }
     }
-  }, [editor, yamlLint, content]);
+  }, [editor, yamlLint, content, macroCompletions]);
 
   // Update editor content when content prop changes
   useEffect(() => {
@@ -168,6 +217,22 @@ const CodeMirrorPage = () => {
     }
   };
 
+  const handleUndo = () => {
+    if (editor && canUndo) {
+      undo(editor);
+      setMessage('Undo performed');
+      setMessageType('success');
+    }
+  };
+
+  const handleRedo = () => {
+    if (editor && canRedo) {
+      redo(editor);
+      setMessage('Redo performed');
+      setMessageType('success');
+    }
+  };
+
   const clearMessage = useCallback(() => {
     setMessage('');
     setMessageType('');
@@ -192,6 +257,23 @@ const CodeMirrorPage = () => {
             <button className="btn btn-success" onClick={handleFixAll}>
               Fix All Issues
             </button>
+            <button 
+              className="btn btn-secondary" 
+              onClick={handleUndo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+            >
+              Undo
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              onClick={handleRedo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+            >
+              Redo
+            </button>
+
           </div>
         </div>
         
@@ -225,6 +307,9 @@ const CodeMirrorPage = () => {
           <li>✅ Fix All Issues button</li>
           <li>✅ Dark theme (One Dark)</li>
           <li>✅ Line numbers and bracket matching</li>
+          <li>✅ Built-in macro autocompletion (Ctrl+Space)</li>
+          <li>✅ Undo/Redo functionality (Ctrl+Z/Ctrl+Y)</li>
+          <li>✅ Indentation markers with active block highlighting</li>
         </ul>
       </div>
     </div>

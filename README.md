@@ -23,12 +23,16 @@ This React application provides a side-by-side comparison of two popular code ed
 - Line numbers and bracket matching
 - Code folding
 - Lint gutter with error indicators
+- **Built-in Autocompletion** - Native completion system with macro support
 - Lightweight and modular architecture
 
 #### Monaco Editor
 - VS Dark theme
 - Minimap for navigation
 - Advanced code folding
+- **Native Autocompletion** - Built-in completion provider with snippet support
+- **Snippet Navigation** - Tab-based placeholder navigation
+- **YAML-Specific Suggestions** - Context-aware YAML completions
 - Built-in IntelliSense
 - More feature-rich but larger bundle size
 
